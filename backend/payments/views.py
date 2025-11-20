@@ -24,3 +24,24 @@ def save_card_in_db(cardData, email, cardId, customer_id, user):
         card_id = cardId,
         user = user,
     )
+
+# Just for testing
+class TestStripeImplementation(APIView):
+
+    def post(self, request):
+        test_payment_process = stripe.PaymentIntent.create(
+            amount=120,
+            currency='inr',
+            payment_method_types=['card'],
+            receipt_email='yash@gmail.com'
+        )
+
+        return Response(data=test_payment_process, status=status.HTTP_200_OK)
+
+# check token expired or not
+class CheckTokenValidation(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        return Response("Token is Valid", status=status.HTTP_200_OK)
