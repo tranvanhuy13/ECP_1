@@ -45,3 +45,107 @@ class CheckTokenValidation(APIView):
 
     def get(self, request):
         return Response("Token is Valid", status=status.HTTP_200_OK)
+    
+# to create card token (to validate your card)
+class CreateCardTokenView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        card_invalid = False
+        data = request.data
+        email = request.data["email"]
+        cardStatus = request.data["save_card"]
+
+        card_info = data["number"]
+        client_card = card_info[slice(12, 16)] # only last 4 digits of card
+
+        # checking for valid user (email associated with card will be checked)
+        customer_data = stripe.Customer.list().data
+        user_data = []
+        for each in customer_data:
+            the_card = each.sources.data[0].last4
+            user_data.append({"user": {"card_num": the_card, "card_holder": each.email}})
+
+        for each in user_data:
+            user_info = each["user"]
+            user_card_info = user_info["card_num"]
+            user_email_info = user_info["card_holder"] 
+
+            if user_card_info == client_card:
+                if user_email_info != email:                
+                    return Response({ 
+                        "detail": "Your email address does not belong to the provided card." }, 
+                        status=status.HTTP_400_BAD_REQUEST)      
+
+        try:
+            stripeToken = stripe.Token.create(
+                card = {
+                "number": data["number"],
+                "exp_month": data["exp_month"],
+                "exp_year": data["exp_year"],
+                "cvc": data["cvc"]
+                },
+            )
+
+        except stripe.error.CardError as e:
+            errorMessage = e.user_message # as per stripe documentation
+            return Response({ "detail": errorMessage}, status=status.HTTP_400_BAD_REQUEST)
+
+        
+        except stripe.error.APIConnectionError:            
+            return Response({ "detail": "Network error, Failed to establish a new connection."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)              
+        
+        customer_data = stripe.Customer.list(email=email).data
+
+        if len(customer_data) == 0:
+            # create customer in stripe (will provide us customer id in response)
+            customer = stripe.Customer.create(
+                email = request.data["email"],
+                description="My new customer"
+            )
+        else:
+            customer = customer_data[0]
+            message = "Customer already exists"
+
+            actual_cn = customer.sources.data[0].last4 # holds card number (last four digits)
+            actual_em = customer.sources.data[0].exp_month
+            actual_ey = customer.sources.data[0].exp_year
+
+            recieved_cn = data["number"]
+            last4_recieved_cn = recieved_cn[-4:]
+            recieved_em = data["exp_month"]
+            recieved_ey = data["exp_year"]
+
+            # comparing the last4 digits of card provided by the user with the last4 digits of card present on stripe
+            if actual_cn != last4_recieved_cn or actual_em != recieved_em or actual_ey != recieved_ey:
+                card_invalid = True
+        
+        if card_invalid:         
+            return Response({"detail": "Invalid Card Details Provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+        else:
+            # creating a card on stripe (getting validated also by the stipe token)
+            create_user_card = stripe.Customer.create_source(
+                customer["id"],
+                source=stripeToken.id,
+            )
+
+            # card id got generated at this point
+
+            if cardStatus:
+                try:
+                    save_card_in_db(data, email, create_user_card.id, customer["id"], request.user)
+                    message = {"customer_id": customer["id"], "email": email, "card_data": create_user_card}
+                    return Response(message, status=status.HTTP_200_OK)
+                except:
+                    return Response({ 
+                        "detail": "Card already in use, please uncheck save card option or select a card from saved card list."},
+                        status=status.HTTP_400_BAD_REQUEST)
+            else:
+                try:
+                    message = {"customer_id": customer["id"], "email": email, "card_data": create_user_card}
+                    return Response(message, status=status.HTTP_200_OK)
+                except:
+                    return Response({ "detail": "Network Error, please check your internet connection."})
+
