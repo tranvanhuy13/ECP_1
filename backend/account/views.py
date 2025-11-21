@@ -67,6 +67,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
+ 
     
 # list all the cards (of currently logged in user only)
 class CardsListView(APIView):
