@@ -80,3 +80,45 @@ class CardsListView(APIView):
         stripeCards = StripeModel.objects.filter(user=request.user)
         serializer = CardsListSerializer(stripeCards, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+# get user details
+class UserAccountDetailsView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            user = User.objects.get(id=pk)
+            serializer = UserSerializer(user, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+            
+        except:
+            return Response({"details": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+# update user account
+class UserAccountUpdateView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def put(self, request, pk):
+        user = User.objects.get(id=pk)
+        data = request.data
+
+        if user:
+            if request.user.id == user.id:
+                user.username = data["username"]
+                user.email = data["email"]
+
+                if data["password"] != "":
+                    user.password = make_password(data["password"])
+
+                user.save()
+                serializer = UserSerializer(user, many=False)
+                message = {"details": "User Successfully Updated.", "user": serializer.data}
+                return Response(message, status=status.HTTP_200_OK)
+            else:
+                return Response({"details": "Permission Denied."}, status.status.HTTP_403_FORBIDDEN)
+        else:
+            return Response({"details": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
