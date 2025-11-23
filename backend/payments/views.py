@@ -149,3 +149,52 @@ class CreateCardTokenView(APIView):
                 except:
                     return Response({ "detail": "Network Error, please check your internet connection."})
 
+# Charge the customer card
+class ChargeCustomerView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        try:
+            data = request.data
+            email = request.data["email"]
+            customer_data = stripe.Customer.list(email=email).data
+            customer = customer_data[0]
+
+            customer_data = stripe.Customer.list(email=request.data["email"]).data
+
+            # make stripe payment (charge the customer) (either use charge api or paymentIntent api)
+            stripe.Charge.create(
+                customer=customer_data[0],
+                amount=int(float(request.data["amount"])*100),
+                currency="inr",
+                description='Software development services',  # required for Indian transactions
+            )
+
+            # saving order in django database
+            new_order = OrderModel.objects.create(
+                name = data["name"],
+                card_number = data["card_number"],
+                address = data["address"],
+                ordered_item = data["ordered_item"],
+                paid_status = data["paid_status"],
+                paid_at = datetime.now(),
+                total_price = data["total_price"],
+                is_delivered = data["is_delivered"],
+                delivered_at = data["delivered_at"],
+                user = request.user
+            )
+
+            return Response(
+                data = {
+                    "data": {
+                        "customer_id": customer.id,
+                        "message": "Payment Successfull",
+                    }
+                }, status=status.HTTP_200_OK)
+
+        except stripe.error.APIConnectionError:            
+            return Response({ 
+                "detail": "Network error, Failed to establish a new connection."}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
