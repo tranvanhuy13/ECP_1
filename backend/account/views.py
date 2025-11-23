@@ -122,3 +122,44 @@ class UserAccountUpdateView(APIView):
         else:
             return Response({"details": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
+# delete user account
+class UserAccountDeleteView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+
+        try:
+            user = User.objects.get(id=pk)
+            data = request.data
+
+            if request.user.id == user.id:
+                if check_password(data["password"], user.password):
+                    user.delete()
+                    return Response({"details": "User successfully deleted."}, status=status.HTTP_204_NO_CONTENT)
+                else:
+                    return Response({"details": "Incorrect password."}, status=status.HTTP_401_UNAUTHORIZED)
+            else:
+                return Response({"details": "Permission Denied."}, status=status.HTTP_403_FORBIDDEN)
+        except:
+            return Response({"details": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+# get billing address (details of user address, all addresses)
+class UserAddressesListView(APIView):
+
+    def get(self, request):
+        user = request.user
+        user_address = BillingAddress.objects.filter(user=user)
+        serializer = BillingAddressSerializer(user_address, many=True)
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# get specific address only
+class UserAddressDetailsView(APIView):
+
+    def get(self, request, pk):
+        user_address = BillingAddress.objects.get(id=pk)
+        serializer = BillingAddressSerializer(user_address, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
