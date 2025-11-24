@@ -15,3 +15,16 @@ class NotificationPreferenceView(APIView):
         prefs, created = NotificationPreference.objects.get_or_create(user=request.user)
         serializer = NotificationPreferenceSerializer(prefs, many=False)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request):
+        """
+        Update preferences (full update).
+        """
+        prefs, created = NotificationPreference.objects.get_or_create(user=request.user)
+        serializer = NotificationPreferenceSerializer(prefs, data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
