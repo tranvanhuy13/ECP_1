@@ -198,3 +198,15 @@ class ChargeCustomerView(APIView):
                 "detail": "Network error, Failed to establish a new connection."}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
+
+# retrieve card (to get user card details)
+class RetrieveCardView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request): 
+        card_details = stripe.Customer.retrieve_source(
+            request.headers["Customer-Id"],
+            request.headers["Card-Id"]
+        )
+        return Response(card_details, status=status.HTTP_200_OK)
