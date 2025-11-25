@@ -281,3 +281,4 @@ class DeleteCardView(APIView):
         stripe.Customer.delete(customerId)
         
         return Response("Card deleted successfully.", status=status.HTTP_200_OK)
+    
