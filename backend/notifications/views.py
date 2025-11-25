@@ -28,3 +28,16 @@ class NotificationPreferenceView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def patch(self, request):
+        """
+        Partial update (e.g., only update one field).
+        """
+        prefs, created = NotificationPreference.objects.get_or_create(user=request.user)
+        serializer = NotificationPreferenceSerializer(prefs, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
