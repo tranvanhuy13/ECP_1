@@ -258,3 +258,21 @@ class OrdersListView(APIView):
             all_orders = OrderModel.objects.filter(user=request.user)
             serializer = AllOrdersListSerializer(all_orders, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
+        
+# change order delivered status
+class ChangeOrderStatus(APIView):
+
+    permission_classes = [permissions.IsAdminUser]
+
+    def put(self, request, pk):
+        data = request.data       
+        order = OrderModel.objects.get(id=pk)
+
+        # only update this
+        order.is_delivered = data["is_delivered"]
+        order.delivered_at = data["delivered_at"]
+        order.save()
+        
+        
+        serializer = AllOrdersListSerializer(order, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
