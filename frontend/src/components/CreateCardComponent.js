@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom'
 import Message from './Message';
 import DeleteCardComponent from './DeleteCardComponent';
 
-// to manage our exp month and exp year
+// to manage our exp month and exp years
 let todays_date = new Date()
 let current_year = todays_date.getFullYear()
 
