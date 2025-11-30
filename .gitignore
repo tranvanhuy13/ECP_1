@@ -79,6 +79,3 @@ Thumbs.db
 *.bak
 *.tmp
 
-# Scripts
-switch-acc.sh
-switch-github.ps1

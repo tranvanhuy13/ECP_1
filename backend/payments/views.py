@@ -9,7 +9,11 @@ from datetime import datetime
 
 
 # stripe secret test key
-stripe.api_key="your secret key here"
+import stripe
+from django.conf import settings
+
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
 
 
 def save_card_in_db(cardData, email, cardId, customer_id, user):
